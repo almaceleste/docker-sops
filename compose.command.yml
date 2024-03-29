@@ -1,0 +1,21 @@
+services:
+  test:
+    container_name: test
+    image: alpine
+    command: sh -c 'while [ ! -f /tmp/sops/filepath ]; do sleep 1; done; cat $(cat /tmp/sops/filepath); rm /tmp/sops/filepath'
+    depends_on:
+      - sops
+    volumes:
+      - /tmp/sops/temp:/tmp/sops
+      - /tmp/sops/secret:/tmp:ro
+
+  sops:
+    container_name: sops
+    image: ghcr.io/getsops/sops:v3.8.1-alpine
+    command: exec-file /app/secret.yaml 'echo {} > /tmp/sops/filepath; while [ -f /tmp/sops/filepath ]; do sleep 1; done'
+    volumes:
+      - ./:/app:ro
+      - ./key:/root/.config/sops/age/keys.txt:ro
+      - /tmp/sops/temp:/tmp/sops
+      - /tmp/sops/secret:/tmp
+    network_mode: none

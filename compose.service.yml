@@ -1,0 +1,32 @@
+services:
+
+  db:
+    image: postgres
+    # entrypoint: sleep infinity
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD_FILE: /tmp/sops/file
+    depends_on:
+      - sops
+    volumes:
+      # - ./done.sh:/docker-entrypoint-initdb.d/done.sh
+      - /tmp/sops:/tmp/sops
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  sops:
+    container_name: sops
+    image: ghcr.io/getsops/sops:v3.8.1-alpine
+    # entrypoint: /app/run.sh
+    # command: --output /tmp/sops/file --decrypt /app/postgres
+    command: exec-file /app/postgres 'cp {} /tmp/sops/file; sleep 3; rm /tmp/sops/file'
+    # command: exec-file /app/postgres 'cp {} /tmp/sops/file; while [ ! -f /tmp/sops/done ]; do sleep 1; done; rm /tmp/sops/file'
+    volumes:
+      - ./:/app:ro
+      - ./key:/root/.config/sops/age/keys.txt:ro
+      - /tmp/sops:/tmp/sops
+    network_mode: none
